@@ -1,21 +1,31 @@
 # Exlivery
 
-**TODO: Add description**
+## Criando o projeto
 
-## Installation
+Criar novo projeto pelo bash:
 
-If [available in Hex](https://hex.pm/docs/publish), the package can be installed
-by adding `exlivery` to your list of dependencies in `mix.exs`:
+```bash
+mix new exlivery
+```
+
+Adicionar dependência do Credo:
 
 ```elixir
 def deps do
   [
-    {:exlivery, "~> 0.1.0"}
+    {:credo, "~> 1.5", only: [:dev, :test], runtime: false}
   ]
 end
 ```
 
-Documentation can be generated with [ExDoc](https://github.com/elixir-lang/ex_doc)
-and published on [HexDocs](https://hexdocs.pm). Once published, the docs can
-be found at [https://hexdocs.pm/exlivery](https://hexdocs.pm/exlivery).
+Configurando Credo:
 
+```bash
+mix credo gen.config
+```
+
+E no arquivo `.credo.exs`, trocar essa regra para false:
+
+```elixir
+{Credo.Check.Readability.ModuleDoc, false},
+```
