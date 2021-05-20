@@ -48,7 +48,7 @@ iex -S mix
 
 ```elixir
 iex> %Exlivery.Users.User{}
-#..> %Exlivery.Users.User{email: nil, name: nil}
+%Exlivery.Users.User{email: nil, name: nil}
 ```
 
 Structs é basicamente: um mapa com um nome.
@@ -58,13 +58,13 @@ Podemos fazer um `alias`:
 ```elixir
 iex> alias Exlivery.Users.User
 iex> %User{}
-#..> %Exlivery.Users.User{email: nil, name: nil}
+%Exlivery.Users.User{email: nil, name: nil}
 iex> %User{email: "cintiafumi@gmail.com", name: "Cintia Fumi"}
-#..> %Exlivery.Users.User{email: "cintiafumi@gmail.com", name: "Cintia Fumi"}
+%Exlivery.Users.User{email: "cintiafumi@gmail.com", name: "Cintia Fumi"}
 iex> user = %User{email: "cintiafumi@gmail.com", name: "Cintia Fumi"}
-#..> %Exlivery.Users.User{email: "cintiafumi@gmail.com", name: "Cintia Fumi"}
+%Exlivery.Users.User{email: "cintiafumi@gmail.com", name: "Cintia Fumi"}
 iex> is_map(user)
-#..> true
+true
 ```
 
 Usaremos `struct` quando quisermos envelopar dados, transmitir dados de um lado para outro e dar mais significado para esse dado. Ao invés de um map puro, queremos bater o olho no código e saber que é um usuário, que é um pedido, que é um carro.
@@ -81,26 +81,26 @@ Ao recompilar o código, vamos criar novamente `user`:
 
 ```elixir
 iex> user = %User{email: "cintiafumi@gmail.com", name: "Cintia Fumi"}
-#..> %Exlivery.Users.User{
-#..>   age: nil,
-#..>   cpf: nil,
-#..>   email: "cintiafumi@gmail.com",
-#..>   name: "Cintia Fumi"
-#..> }
+%Exlivery.Users.User{
+  age: nil,
+  cpf: nil,
+  email: "cintiafumi@gmail.com",
+  name: "Cintia Fumi"
+}
 iex> Map.put(user, :age, 36)
-#..> %Exlivery.Users.User{
-#..>   age: 36,
-#..>   cpf: nil,
-#..>   email: "cintiafumi@gmail.com",
-#..>   name: "Cintia Fumi"
-#..> }
+%Exlivery.Users.User{
+  age: 36,
+  cpf: nil,
+  email: "cintiafumi@gmail.com",
+  name: "Cintia Fumi"
+}
 iex> %{user | cpf: "123456789"}
-#..> %Exlivery.Users.User{
-#..>   age: nil,
-#..>   cpf: "123456789",
-#..>   email: "cintiafumi@gmail.com",
-#..>   name: "Cintia Fumi"
-#..> }
+%Exlivery.Users.User{
+  age: nil,
+  cpf: "123456789",
+  email: "cintiafumi@gmail.com",
+  name: "Cintia Fumi"
+}
 ```
 
 A partir de agora, sempre que formos transitar dados de usuário, iremos buildar uma struct e passar essa struct para nossas funções como argumento.
@@ -109,14 +109,14 @@ Também podemos fazer pattern matching:
 
 ```elixir
 iex> %User{email: valor} = user
-#..> %Exlivery.Users.User{
-#..>   age: nil,
-#..>   cpf: nil,
-#..>   email: "cintiafumi@gmail.com",
-#..>   name: "Cintia Fumi"
-#..> }
+%Exlivery.Users.User{
+  age: nil,
+  cpf: nil,
+  email: "cintiafumi@gmail.com",
+  name: "Cintia Fumi"
+}
 iex> valor
-#..> "cintiafumi@gmail.com"
+"cintiafumi@gmail.com"
 ```
 
 Agora temos um novo contexto `user` que vai ter várias funcionalidades ao redor de `user`. E com isso, seguiremos com separação de código por contexto (Domain Driven Design). Definindo os contextos da aplicação como boa prática, isolando os comportamentos, os códigos e os módulos da aplicação.
@@ -139,9 +139,9 @@ Ao recompilar e tentar criar uma struct, agora retorna um erro:
 
 ```elixir
 iex> %User{}
-#..> ** (ArgumentError) the following keys must also be given when building struct Exlivery.Users.User: [:name, #..> :email, :cpf, :age]
-#..>     (exlivery 0.1.0) expanding struct: Exlivery.Users.User.__struct__/1
-#..>     iex:14: (file)
+** (ArgumentError) the following keys must also be given when building struct Exlivery.Users.User: [:name :email, :cpf, :age]
+    (exlivery 0.1.0) expanding struct: Exlivery.Users.User.__struct__/1
+    iex:14: (file)
 ```
 
 Se quisermos que só `:name` seja obrigatório:
@@ -158,12 +158,12 @@ Agora é possível criar passando todas chaves:
 
 ```elixir
 iex> %User{email: "cintiafumi@gmail.com", name: "Cintia Fumi", cpf: "123456", age: 36}
-#..> %Exlivery.Users.User{
-#..>   age: 36,
-#..>   cpf: "123456",
-#..>   email: "cintiafumi@gmail.com",
-#..>   name: "Cintia Fumi"
-#..> }
+%Exlivery.Users.User{
+  age: 36,
+  cpf: "123456",
+  email: "cintiafumi@gmail.com",
+  name: "Cintia Fumi"
+}
 ```
 
 Por ser muito trabalhoso passar todas chaves e valores para criar uma nova struct, é comum criarmos uma função `build`. Quando estamos dentro do módulo, não precisamos criar um `alias` ou referenciar o próprio módulo.
@@ -190,12 +190,12 @@ Agora, podemos criar uma struct chamando a função build:
 
 ```elixir
 iex> User.build("Cintia Fumi", "cintiafumi@gmail.com", "123456", 36)
-#..> %Exlivery.Users.User{
-#..>   age: 36,
-#..>   cpf: "123456",
-#..>   email: "cintiafumi@gmail.com",
-#..>   name: "Cintia Fumi"
-#..> }
+%Exlivery.Users.User{
+  age: 36,
+  cpf: "123456",
+  email: "cintiafumi@gmail.com",
+  name: "Cintia Fumi"
+}
 ```
 
 Mas para deixar a struct mais segura, vamos usar o pattern matching e restringir `age` para maiores de 18 anos de idade.
@@ -215,27 +215,27 @@ Ao tentar passar uma idade menor que 18 anos, vai retornar um erro:
 
 ```elixir
 iex> User.build("Cintia Fumi", "cintiafumi@gmail.com", "123456", 6)
-#..>** (FunctionClauseError) no function clause matching in Exlivery.Users.User.build/4
-#..>
-#..>    The following arguments were given to Exlivery.Users.User.build/4:
-#..>
-#..>        # 1
-#..>        "Cintia Fumi"
-#..>
-#..>        # 2
-#..>        "cintiafumi@gmail.com"
-#..>
-#..>        # 3
-#..>        "123456"
-#..>
-#..>        # 4
-#..>        6
-#..>
-#..>    Attempted function clauses (showing 1 out of 1):
-#..>
-#..>        def build(name, email, cpf, age) when age >= 18
-#..>
-#..>    (exlivery 0.1.0) lib/users/user.ex:7: Exlivery.Users.User.build/4
+** (FunctionClauseError) no function clause matching in Exlivery.Users.User.build/4
+
+   The following arguments were given to Exlivery.Users.User.build/4:
+
+       # 1
+       "Cintia Fumi"
+
+       # 2
+       "cintiafumi@gmail.com"
+
+       # 3
+       "123456"
+
+       # 4
+       6
+
+   Attempted function clauses (showing 1 out of 1):
+
+       def build(name, email, cpf, age) when age >= 18
+
+   (exlivery 0.1.0) lib/users/user.ex:7: Exlivery.Users.User.build/4
 ```
 
 Vamos adicionar o retorno de erro para caso envie parâmetros inválidos, e verificar se `cpf` é string:
@@ -264,7 +264,7 @@ E assim, o retorno fica:
 
 ```elixir
 iex> User.build("Cintia Fumi", "cintiafumi@gmail.com", 123456, 36)
-#..> {:error, "Invalid parameters."}
+{:error, "Invalid parameters."}
 iex> User.build("Cintia Fumi", "cintiafumi@gmail.com", "123456", 6)
-#..> {:error, "Invalid parameters."}
+{:error, "Invalid parameters."}
 ```
