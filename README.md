@@ -57,12 +57,16 @@ Podemos fazer um `alias`:
 
 ```elixir
 iex> alias Exlivery.Users.User
+
 iex> %User{}
 %Exlivery.Users.User{email: nil, name: nil}
+
 iex> %User{email: "cintiafumi@gmail.com", name: "Cintia Fumi"}
 %Exlivery.Users.User{email: "cintiafumi@gmail.com", name: "Cintia Fumi"}
+
 iex> user = %User{email: "cintiafumi@gmail.com", name: "Cintia Fumi"}
 %Exlivery.Users.User{email: "cintiafumi@gmail.com", name: "Cintia Fumi"}
+
 iex> is_map(user)
 true
 ```
@@ -87,6 +91,7 @@ iex> user = %User{email: "cintiafumi@gmail.com", name: "Cintia Fumi"}
   email: "cintiafumi@gmail.com",
   name: "Cintia Fumi"
 }
+
 iex> Map.put(user, :age, 36)
 %Exlivery.Users.User{
   age: 36,
@@ -94,6 +99,7 @@ iex> Map.put(user, :age, 36)
   email: "cintiafumi@gmail.com",
   name: "Cintia Fumi"
 }
+
 iex> %{user | cpf: "123456789"}
 %Exlivery.Users.User{
   age: nil,
@@ -115,6 +121,7 @@ iex> %User{email: valor} = user
   email: "cintiafumi@gmail.com",
   name: "Cintia Fumi"
 }
+
 iex> valor
 "cintiafumi@gmail.com"
 ```
@@ -265,6 +272,7 @@ E assim, o retorno fica:
 ```elixir
 iex> User.build("Cintia Fumi", "cintiafumi@gmail.com", 123456, 36)
 {:error, "Invalid parameters."}
+
 iex> User.build("Cintia Fumi", "cintiafumi@gmail.com", "123456", 6)
 {:error, "Invalid parameters."}
 ```
