@@ -276,3 +276,134 @@ iex> User.build("Cintia Fumi", "cintiafumi@gmail.com", 123456, 36)
 iex> User.build("Cintia Fumi", "cintiafumi@gmail.com", "123456", 6)
 {:error, "Invalid parameters."}
 ```
+
+## Criando a struct de Order e Itens
+
+Vamos criar um app de delivery, onde podemos criar pedidos e gerar um arquivo csv para ser consumido pelo outro projeto. E tentar criar a integração entre os projetos.
+
+Temos um usuário. Agora, vamos criar um pedido. O pedido terá a referência para o usuário e para os itens.
+
+Vamos criar um novo contexto com a struct em `/lib/orders/order.ex`:
+
+```elixir
+defmodule Exlivery.Orders.Order do
+  @keys [:user_cpf, :delivery_address, :items, :total_price]
+
+  @enforce_keys @keys
+
+  defstruct @keys
+
+  def build do
+    {:ok, %__MODULE__{user_cpf: nil, delivery_address: nil, items: nil, total_price: nil}}
+  end
+end
+```
+
+Mas antes temos que definir a struct para representar os `items`, que vai ter: descrição, valor, quantidade. Em `/lib/orders/item.ex`.
+
+Os campos de `description` (ex: pizza de frango), `category` (possíveis categorias que tínhamos no relatório, ex: pizza, hamburguer), `unity_price` (20 reais) e `quantity` (sempre acima de zero).
+
+A função `build` tem validações de `quantity` maior que zero e `category` tem que estar presente em `@categories`.
+
+```elixir
+defmodule Exlivery.Orders.Item do
+  @categories [:pizza, :hamburguer, :carne, :prato_feito, :japonesa, :sobremesa]
+
+  @keys [:description, :category, :unity_price, :quantity]
+
+  @enforce_keys @keys
+
+  defstruct @keys
+
+  def build(description, category, unity_price, quantity)
+      when quantity > 0 and category in @categories do
+    {:ok,
+     %__MODULE__{
+       description: description,
+       category: category,
+       unity_price: unity_price,
+       quantity: quantity
+     }}
+  end
+end
+```
+
+Vamos no `iex`:
+
+```elixir
+iex> alias Exlivery.Orders.Item
+Exlivery.Orders.Item
+
+iex> Item.build("Pizza de peperoni", :pizza, 50.00, 1)
+{:ok,
+ %Exlivery.Orders.Item{
+   category: :pizza,
+   description: "Pizza de peperoni",
+   quantity: 1,
+   unity_price: 50.0
+ }}
+
+iex> Item.build("Pizza de peperoni", :pizza, 50.00, 0)
+** (FunctionClauseError) no function clause matching in Exlivery.Orders.Item.build/4
+
+    The following arguments were given to Exlivery.Orders.Item.build/4:
+
+        # 1
+        "Pizza de peperoni"
+
+        # 2
+        :pizza
+
+        # 3
+        50.0
+
+        # 4
+        0
+
+    Attempted function clauses (showing 1 out of 1):
+
+        def build(description, category, unity_price, quantity) when quantity > 0 and (category === :pizza or category === :hamburguer or category === :carne or category === :prato_feito or category === :japonesa or category === :sobremesa)
+
+    (exlivery 0.1.0) lib/orders/item.ex:10: Exlivery.Orders.Item.build/4
+
+iex> Item.build("Pizza de peperoni", :banana, 50.00, 1)
+** (FunctionClauseError) no function clause matching in Exlivery.Orders.Item.build/4
+
+    The following arguments were given to Exlivery.Orders.Item.build/4:
+
+        # 1
+        "Pizza de peperoni"
+
+        # 2
+        :banana
+
+        # 3
+        50.0
+
+        # 4
+        1
+
+    Attempted function clauses (showing 1 out of 1):
+
+        def build(description, category, unity_price, quantity) when quantity > 0 and (category === :pizza or category === :hamburguer or category === :carne or category === :prato_feito or category === :japonesa or category === :sobremesa)
+
+    (exlivery 0.1.0) lib/orders/item.ex:10: Exlivery.Orders.Item.build/4
+```
+
+Para começar as validações para caso não dê match no `build`, vamos retornar um `:error`:
+
+```elixir
+  def build(_description, _category, _unity_price, _quantity) do
+    {:error, "Invalid parameters"}
+  end
+```
+
+No `iex`:
+
+```elixir
+iex> Item.build("Pizza de peperoni", :banana, 50.00, 1)
+{:error, "Invalid parameters"}
+
+iex> Item.build("Pizza de peperoni", :pizza, 50.00, 0)
+{:error, "Invalid parameters"}
+```
