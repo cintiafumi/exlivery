@@ -407,3 +407,136 @@ iex> Item.build("Pizza de peperoni", :banana, 50.00, 1)
 iex> Item.build("Pizza de peperoni", :pizza, 50.00, 0)
 {:error, "Invalid parameters"}
 ```
+
+## Utilizando a lib Decimal
+
+Uma validação que devemos adicionar em relação ao item é no `unity_price`, pois normalmente nunca vemos num sistema real em produção a utilização de valor de preço monetário (seja real ou dólar ou qualquer outra moeda) como números de pontos flutuantes `float`. Porque ocorrem erros de arredondamento na nossa máquina que podem causar inconsistências no banco de dados ou no sistema. Então, todo sistema que vai lidar com dinheiro, temos que arrumar uma melhor forma de tratar do que simplesmente utilizar `float`, para não perder a precisão. Uma das formas utilizadas é gravar esses valores como números inteiros. No caso de R$ 100,53 guardaremos 10053 e depois convertemos esse valor para o usuário final. E quando recebe um valor com decimais, multiplica por 100.
+
+Para não perder a precisão e ao mesmo tempo ter praticidade, temos libs para auxiliar nessa questão. Vamos usar a lib [Decimal](https://hexdocs.pm/decimal/readme.html) que vai dar precisão monetária.
+
+Vamos instalar a dependência em `mix.exs`:
+
+```elixir
+  defp deps do
+    [
+      {:credo, "~> 1.5", only: [:dev, :test], runtime: false},
+      {:decimal, "~> 2.0"}
+    ]
+  end
+```
+
+Agora vamos para o `iex`. Podemos usar a função `new` ou `cast` para transformar uma string em decimal.
+
+```elixir
+iex> Decimal.cast("100.55")
+{:ok, #Decimal<100.55>}
+
+iex> Decimal.new("100.66")
+#Decimal<100.66>
+```
+
+O `cast` funciona para string ou float, e o `new` sempre em string:
+
+```elixir
+iex> Decimal.cast(50.55)
+{:ok, #Decimal<50.55>}
+
+iex> Decimal.new(50.55)
+** (FunctionClauseError) no function clause matching in Decimal.new/1
+
+    The following arguments were given to Decimal.new/1:
+
+        # 1
+        50.55
+
+    Attempted function clauses (showing 3 out of 3):
+
+        def new(%Decimal{sign: sign, coef: coef, exp: exp} = num) when (sign === 1 or sign === -1) and (is_integer(coef) and coef >= 0 or (coef === :NaN or coef === :inf)) and is_integer(exp)
+        def new(int) when is_integer(int)
+        def new(binary) when is_binary(binary)
+
+    (decimal 2.0.0) lib/decimal.ex:1083: Decimal.new/1
+```
+
+Iremos utilizar a lib Decimal sempre que for usar valores monetários. O fato de ser uma struct não tem problema.
+
+Se passar uma string qualquer, retorna um `:error`
+
+```elixir
+iex> Decimal.cast("banana")
+:error
+```
+
+Então, vamos tratar isso na aplicação. Antes de rodar o `build` da struct:
+
+```elixir
+defmodule Exlivery.Orders.Item do
+  @categories [:pizza, :hamburguer, :carne, :prato_feito, :japonesa, :sobremesa]
+
+  @keys [:description, :category, :unity_price, :quantity]
+
+  @enforce_keys @keys
+
+  defstruct @keys
+
+  def build(description, category, unity_price, quantity)
+      when quantity > 0 and category in @categories do
+    unity_price
+    |> Decimal.cast()
+    |> build_item(description, category, quantity)
+  end
+
+  def build(_description, _category, _unity_price, _quantity) do
+    {:error, "Invalid parameters"}
+  end
+
+  defp build_item({:ok, unity_price}, description, category, quantity) do
+    {:ok,
+     %__MODULE__{
+       description: description,
+       category: category,
+       unity_price: unity_price,
+       quantity: quantity
+     }}
+  end
+
+  defp build_item(:error, _description, _category, _quantity), do: {:error, "Invalid price."}
+end
+```
+
+No `iex`:
+
+```elixir
+iex> alias Exlivery.Orders.Item
+Exlivery.Orders.Item
+
+iex> Item.build("Pizza de peperoni", :pizza, 50.00, 1)
+{:ok,
+ %Exlivery.Orders.Item{
+   category: :pizza,
+   description: "Pizza de peperoni",
+   quantity: 1,
+   unity_price: #Decimal<50.0>
+ }}
+
+iex> Item.build("Pizza de peperoni", :pizza, 0.00, 1)
+{:ok,
+ %Exlivery.Orders.Item{
+   category: :pizza,
+   description: "Pizza de peperoni",
+   quantity: 1,
+   unity_price: #Decimal<0.0>
+ }}
+
+iex> Item.build("Pizza de peperoni", :pizza, "50.55", 1)
+{:ok,
+ %Exlivery.Orders.Item{
+   category: :pizza,
+   description: "Pizza de peperoni",
+   quantity: 1,
+   unity_price: #Decimal<50.55>
+ }}
+
+iex> Item.build("Pizza de peperoni", :pizza, "banana", 1)
+{:error, "Invalid price."}
+```
