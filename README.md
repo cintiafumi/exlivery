@@ -737,3 +737,117 @@ defmodule Exlivery.Users.UserTest do
   end
 end
 ```
+
+## Conhecendo a lib ExMachina
+
+Para instalar [ExMachina](https://github.com/thoughtbot/ex_machina), temos que fazer algumas configurações. Em `mix.exs`, adicionamos nas dependências:
+
+```elixir
+  defp deps do
+    [
+      {:credo, "~> 1.5", only: [:dev, :test], runtime: false},
+      {:decimal, "~> 2.0"},
+      {:ex_machina, "~> 2.7.0"}, # Adicionar essa linha
+    ]
+  end
+```
+
+Ainda no mesmo arquivo, adicionar a parte de `env` conforme [documentação](https://github.com/thoughtbot/ex_machina):
+
+```elixir
+  def project do
+    [
+      app: :exlivery,
+      version: "0.1.0",
+      elixir: "~> 1.11",
+      elixirc_paths: elixirc_paths(Mix.env), # Adicionar essa linha
+      start_permanent: Mix.env() == :prod,
+      deps: deps()
+    ]
+  end
+  # ...
+
+  defp elixirc_paths(:test), do: ["lib", "test/support"]
+  defp elixirc_paths(_), do: ["lib"]
+```
+
+Pois, se estivermos em ambiente `test`, compilar também a pasta `test/support` além da pasta `lib` que é a default.
+
+O `iex` é iniciado por default com env em dev:
+
+```bash
+$ iex -S mix
+```
+
+```elixir
+iex> Mix.env
+:dev
+```
+
+Mas podemos alterar o env ao iniciar:
+
+```bash
+$ MIX_ENV=test iex -S mix
+```
+
+Então, o env é de teste:
+
+```elixir
+iex> Mix.env
+:test
+```
+
+Agora vamos criar a `factory`, para facilitar a criação de `user` e `item` nos testes. Vamos criar o arquivo `test/support/factory.ex` que vai ser um módulo como qualquer outro que vamos criar as estruturas para auxiliar nosso teste.
+
+Devemos usar a notação no nome usando `_factory` no final para `ExMachina` entender que isso é uma factory e então criamos a struct.
+
+```elixir
+defmodule Exlivery.Factory do
+  use ExMachina
+
+  alias Exlivery.Users.User
+
+  def user_factory do
+    %User{
+      name: "Cintia",
+      email: "cintia@banana.com",
+      cpf: "12345678900",
+      age: 36,
+      address: "Rua das bananeiras, 35"
+    }
+  end
+end
+```
+
+A diferença de criar com `ExMachina` é que agora no teste, vamos importar o `Exlivery.Factory` e usar a factory.
+
+```elixir
+defmodule Exlivery.Users.UserTest do
+  use ExUnit.Case
+
+  import Exlivery.Factory
+
+  alias Exlivery.Users.User
+
+  describe "build/5" do
+    test "when all params are valid, returns the user" do
+      response =
+        User.build("Rua das bananeiras, 35", "Cintia", "cintia@banana.com", "12345678900", 36)
+
+      expected_response = {:ok, build(:user)}
+
+      assert response == expected_response
+    end
+
+    test "when there are invalid params, returns an error" do
+      response = {:ok, build(:user, age, 15)}
+
+      expected_response = {:error, "Invalid parameters."}
+
+      assert response == expected_response
+    end
+  end
+end
+```
+
+Obs.: usar o [style guide](https://github.com/christopheradams/elixir_style_guide#module-attribute-ordering) para saber a ordem dos atributos, diretivas e macros dentro de um módulo.
