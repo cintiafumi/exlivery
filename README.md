@@ -540,3 +540,160 @@ iex> Item.build("Pizza de peperoni", :pizza, "50.55", 1)
 iex> Item.build("Pizza de peperoni", :pizza, "banana", 1)
 {:error, "Invalid price."}
 ```
+
+## Finalizando a struct de Order
+
+Vamos refatorar o module de User para adicionar a chave `address`:
+
+```elixir
+defmodule Exlivery.Users.User do
+  @keys [:address, :name, :email, :cpf, :age]
+  @enforce_keys @keys
+
+  defstruct @keys
+
+  def build(address, name, email, cpf, age) when age >= 18 and is_bitstring(cpf) do
+    {:ok,
+     %__MODULE__{
+       address: address,
+       name: name,
+       email: email,
+       cpf: cpf,
+       age: age
+     }}
+  end
+
+  def build(_address, _name, _email, _cpf, _age), do: {:error, "Invalid parameters."}
+end
+```
+
+Vamos validar a criação da `order`, fazendo pattern matching das chaves de `User` e da lista de `Item`. E fazemos o pattern matching do `head` da lista para ter certeza que tem pelo menos um item na lista, ao invés de uma lista em branco.
+
+Se receber qualquer coisa diferente de `User`, temos que retornar um erro.
+
+O `total_price`, temos que calcular. Multiplicar `unity_price` com `quantity` de cada `Item`. E como estamos com valores monetários, vamos usar sempre a lib Decimal para as operações matemáticas.
+
+```elixir
+defmodule Exlivery.Orders.Order do
+  alias Exlivery.Orders.Item
+  alias Exlivery.Users.User
+
+  @keys [:user_cpf, :delivery_address, :items, :total_price]
+
+  @enforce_keys @keys
+
+  defstruct @keys
+
+  def build(%User{cpf: cpf, address: address}, [%Item{} | _items] = items) do
+    {:ok,
+     %__MODULE__{
+       user_cpf: cpf,
+       delivery_address: address,
+       items: items,
+       total_price: calculate_total_price(items)
+     }}
+  end
+
+  def build(_user, _items), do: {:error, "Invalid parameters."}
+
+  defp calculate_total_price(items) do
+    Enum.reduce(items, Decimal.new("0.00"), &sum_prices(&1, &2))
+  end
+
+  defp sum_prices(%Item{unity_price: price, quantity: quantity}, acc) do
+    price
+    |> Decimal.mult(quantity)
+    |> Decimal.add(acc)
+  end
+end
+```
+
+E para testar no `iex`, vamos criar uma lista com dois items:
+
+```elixir
+iex> {:ok, item1} = Item.build("Pizza de peperoni", :pizza, "25.5", 2)
+{:ok,
+ %Exlivery.Orders.Item{
+   category: :pizza,
+   description: "Pizza de peperoni",
+   quantity: 2,
+   unity_price: #Decimal<25.5>
+ }}
+
+iex> {:ok, item2} = Item.build("Açaí", :sobremesa, "15.0", 1)
+{:ok,
+ %Exlivery.Orders.Item{
+   category: :sobremesa,
+   description: "Açaí",
+   quantity: 1,
+   unity_price: #Decimal<15.0>
+ }}
+
+iex> items = [item1, item2]
+[
+  %Exlivery.Orders.Item{
+    category: :pizza,
+    description: "Pizza de peperoni",
+    quantity: 2,
+    unity_price: #Decimal<25.5>
+  },
+  %Exlivery.Orders.Item{
+    category: :sobremesa,
+    description: "Açaí",
+    quantity: 1,
+    unity_price: #Decimal<15.0>
+  }
+]
+```
+
+Vamos criar um user:
+
+```elixir
+iex> alias Exlivery.Users.User
+Exlivery.Users.User
+
+iex> {:ok, user} = User.build("Rua das bananeiras", "Cintia", "cintia@banana.com", "12345678900", 36)
+{:ok,
+ %Exlivery.Users.User{
+   address: "Rua das bananeiras",
+   age: 36,
+   cpf: "12345678900",
+   email: "cintia@banana.com",
+   name: "Cintia"
+ }}
+```
+
+E por fim, criar uma order:
+
+```elixir
+iex> alias Exlivery.Orders.Order
+Exlivery.Orders.Order
+
+iex> Order.build(user, items)
+{:ok,
+ %Exlivery.Orders.Order{
+   delivery_address: "Rua das bananeiras",
+   items: [
+     %Exlivery.Orders.Item{
+       category: :pizza,
+       description: "Pizza de peperoni",
+       quantity: 2,
+       unity_price: #Decimal<25.5>
+     },
+     %Exlivery.Orders.Item{
+       category: :sobremesa,
+       description: "Açaí",
+       quantity: 1,
+       unity_price: #Decimal<15.0>
+     }
+   ],
+   total_price: #Decimal<66.00>,
+   user_cpf: "12345678900"
+ }}
+
+iex> Order.build(user, [])
+{:error, "Invalid parameters."}
+
+iex> Order.build("banana", items)
+{:error, "Invalid parameters."}
+```
