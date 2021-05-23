@@ -851,3 +851,64 @@ end
 ```
 
 Obs.: usar o [style guide](https://github.com/christopheradams/elixir_style_guide#module-attribute-ordering) para saber a ordem dos atributos, diretivas e macros dentro de um módulo.
+
+## Testando a struct de Item
+
+Adicionamos `item_factory`
+
+```elixir
+  def item_factory do
+    %Item{
+      description: "Pizza de peperoni",
+      category: :pizza,
+      unity_price: Decimal.new("35.5"),
+      quantity: 1
+    }
+  end
+```
+
+Temos que validar `quantity`, `category` e `unity_price` na criação do Item. Criamos um arquivo `test/orders/order_test.exs`.
+
+```elixir
+defmodule Exlivery.Orders.ItemTest do
+  use ExUnit.Case
+
+  import Exlivery.Factory
+
+  alias Exlivery.Orders.Item
+
+  describe "build/4" do
+    test "when all params are valid, returns an item" do
+      response = Item.build("Pizza de peperoni", :pizza, "35.5", 1)
+
+      expected_response = {:ok, build(:item)}
+
+      assert response == expected_response
+    end
+
+    test "when there is an invalid category, returns an error" do
+      response = Item.build("Pizza de peperoni", :banana, "35.5", 1)
+
+      expected_response = {:error, "Invalid parameters"}
+
+      assert response == expected_response
+    end
+
+    test "when there is an invalid price, returns an error" do
+      response = Item.build("Pizza de peperoni", :pizza, "banana_price", 1)
+
+      expected_response = {:error, "Invalid price."}
+
+      assert response == expected_response
+    end
+
+    test "when there is an invalid quantity, returns an error" do
+      response = Item.build("Pizza de peperoni", :pizza, "35.5", 0)
+
+      expected_response = {:error, "Invalid parameters"}
+
+      assert response == expected_response
+    end
+  end
+end
+```
