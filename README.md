@@ -912,3 +912,72 @@ defmodule Exlivery.Orders.ItemTest do
   end
 end
 ```
+
+## Testando a struct de Order
+
+Vamos criar o arquivo `test/orders/order_test.exs` e o `order_factory`.
+
+```elixir
+  def order_factory do
+    %Order{
+      delivery_address: "Rua das bananeiras, 35",
+      items: [
+        build(:item),
+        build(:item,
+          description: "Temaki de atum",
+          category: :japonesa,
+          quantity: 2,
+          unity_price: Decimal.new("20.50")
+        )
+      ],
+      total_price: Decimal.new("76.50"),
+      user_cpf: "12345678900"
+    }
+  end
+```
+
+Uma forma de criar a lista de items seria usando `build_list(2, :item)`, mas vamos usar somente o `build` para modificar com mais facilidade cada um dos items.
+
+```elixir
+defmodule Exlivery.Orders.OrderTest do
+  use ExUnit.Case
+
+  import Exlivery.Factory
+
+  alias Exlivery.Orders.Order
+
+  describe "build/2" do
+    test "when all params are valid, returns an item" do
+      user = build(:user)
+
+      items = [
+        build(:item),
+        build(:item,
+          description: "Temaki de atum",
+          category: :japonesa,
+          quantity: 2,
+          unity_price: Decimal.new("20.50")
+        )
+      ]
+
+      response = Order.build(user, items)
+
+      expected_response = {:ok, build(:order)}
+
+      assert response == expected_response
+    end
+
+    test "when there is not items in the order, returns an error" do
+      user = build(:user)
+
+      items = []
+
+      response = Order.build(user, items)
+
+      expected_response = {:error, "Invalid parameters"}
+
+      assert response == expected_response
+    end
+  end
+end
+```
