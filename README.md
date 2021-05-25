@@ -981,3 +981,66 @@ defmodule Exlivery.Orders.OrderTest do
   end
 end
 ```
+
+---
+
+## Utilizando Agents pra manter estado
+
+Os processos normalmente têm um estado porque ele tem um pedaço de memória que ele pode enviar e receber mensagens, e manter um dado enquanto ele viver.
+
+[Agent](https://elixir-lang.org/getting-started/mix-otp/agent.html) é um processo específico para guardar estados.
+
+Na linguagem funcional, temos o contexto imutável. Então, não trabalhamos com variáveis globais, ou classes (objetos) que mantém estados.
+
+Para simular um banco de dados, onde poderemos salvar e atualizar usuários e pedidos, vamos utilizar o Agent.
+
+O Agent é usado em produção em casos muito específicos, mas para podermos avançar na nossa lógica e poder avançar nos conceitos da linguagem em si, é legal fazermos esse passo para habituarmos com pattern matching, funções, módulo Enum, e para simular a ideia de banco de dados.
+
+Faremos uma introdução em `Agent` pelo `iex`. Usamos o módulo Agent para criar um Agent e quando iniciamos o Agent, criamos a função para dizer o estado inicial dele.
+
+```elixir
+iex> Agent.start_link fn -> %{} end
+{:ok, #PID<0.198.0>}
+```
+
+Recebemos um PID pois ele é um processo. Vamos salvar sua referência por pattern matching
+
+```elixir
+iex> {:ok, agent} = Agent.start_link fn -> %{} end
+{:ok, #PID<0.200.0>}
+```
+
+Lembrando que usamos `Process.alive` para saber se o processo estava vivo
+
+```elixir
+iex> Process.alive?(agent)
+true
+```
+
+Então o `agent` está vivo enquanto a aplicação está em execução ou enquanto não o encerrarmos explicitamente.
+
+Podemos atualizar o estado desse `agent`
+
+```elixir
+iex> Agent.update(agent, fn my_map -> Map.put(my_map, :fruta, "banana") end)
+:ok
+
+iex> Agent.get(agent, fn my_map -> my_map end)
+%{fruta: "banana"}
+```
+
+Podemos ver o estado e a fruta ainda está no estado ainda.
+
+Ao atualizar de novo o `agent`
+
+```elixir
+iex> Agent.update(agent, fn my_map -> Map.put(my_map, :vegetal, "cenoura") end)
+:ok
+
+iex> Agent.get(agent, fn my_map -> my_map end)
+%{fruta: "banana", vegetal: "cenoura"}
+```
+
+O map vai existir enquanto o `agent` executar.
+
+Então, vamos usar o `Agent` para manter o estado de usuário e de pedido da aplicação.
