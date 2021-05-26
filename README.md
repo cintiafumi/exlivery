@@ -1044,3 +1044,134 @@ iex> Agent.get(agent, fn my_map -> my_map end)
 O map vai existir enquanto o `agent` executar.
 
 Então, vamos usar o `Agent` para manter o estado de usuário e de pedido da aplicação.
+
+## Criando o User Agent
+
+Vamos criar um novo arquivo no contexto de user `users/agent.ex`. Precisamos criar a função `start_link` para iniciar o Agent e ter um PID de retorno. Recebemos o estado inicial mas não iremos utilizá-lo. Essa função devolve o estado inicial, que vai ser um map vazio onde iremos armazenar os usuários. Sempre que usamos o Agent dentro de um módulo, damos um nome a ele para podemos utilizá-lo fora desse módulo.
+
+```elixir
+defmodule Exlivery.Users.Agent do
+  alias Exlivery.Users.User
+
+  use Agent
+
+  def start_link(_initial_state) do
+    Agent.start_link(fn -> %{} end, name: __MODULE__)
+  end
+
+end
+```
+
+Vamos criar a função de `save` que vai receber uma struct de user e vamos chamar a função `Agent.update` passando o PID, que nesse caso é o nome do módulo. Também precisamos de uma função `update_state` para colocarmos nosso usuário no estado atual.
+
+Por pattern matching, pegamos o cpf do user e então vamos alterar o nosso agent
+
+```elixir
+defmodule Exlivery.Users.Agent do
+  alias Exlivery.Users.User
+
+  use Agent
+
+  def start_link(_initial_state) do
+    Agent.start_link(fn -> %{} end, name: __MODULE__)
+  end
+
+  def save(%User{} = user), do: Agent.update(__MODULE__, &update_state(&1, user))
+
+  defp update_state(state, %User{cpf: cpf} = user), do: Map.put(state, cpf, user)
+end
+```
+
+Para ler os dados do Agent, vamos criar a função `get` e `get_user`. Se passar um cpf inexistente, retornamos um `:error`.
+
+```elixir
+defmodule Exlivery.Users.Agent do
+  alias Exlivery.Users.User
+
+  use Agent
+
+  def start_link(_initial_state) do
+    Agent.start_link(fn -> %{} end, name: __MODULE__)
+  end
+
+  def save(%User{} = user), do: Agent.update(__MODULE__, &update_state(&1, user))
+
+  def get(cpf), do: Agent.get(__MODULE__, &get_user(&1, cpf))
+
+  defp get_user(state, cpf) do
+    case Map.get(state, cpf) do
+      nil -> {:error, "User not found."}
+      user -> {:ok, user}
+    end
+  end
+
+  defp update_state(state, %User{cpf: cpf} = user), do: Map.put(state, cpf, user)
+end
+```
+
+A função `get_user` também poderia ser assim sem `case`:
+
+```elixir
+  defp get_user(state, cpf) do
+    state
+    |> Map.get(cpf)
+    |> handle_get()
+  end
+
+  defp handle_get(nil), do: {:error, "User not found."}
+  defp handle_get(user), do: {:ok, user}
+```
+
+No `iex` vamos criar uma mapa qualquer e ver o retorno do `Map.get` com uma chave existente `:a` e com uma chave inexistente `:c`
+
+```elixir
+iex> map = %{a: 1, b: 2}
+%{a: 1, b: 2}
+
+iex> Map.get(map, :a)
+1
+
+iex> Map.get(map, :c)
+nil
+```
+
+Para criar um `alias` direto, o módulo `Agent` já existe, então vamos renomear com `as`. Temos que passar qualquer coisas no `start_link` mesmo que não usamos o estado inicial.
+
+Precisamos criar um `user` para então salvá-lo `user` no nosso `Agent.
+
+```elixir
+iex> alias Exlivery.Users.Agent, as: UserAgent
+Exlivery.Users.Agent
+
+iex> UserAgent.start_link(%{})
+{:ok, #PID<0.564.0>}
+
+iex> alias Exlivery.Users.User
+Exlivery.Users.User
+
+iex> {:ok, user} = User.build("Rua das bananeiras", "Cintia", "cintia@banana.com", "12345678900", 36)
+{:ok,
+ %Exlivery.Users.User{
+   address: "Rua das bananeiras",
+   age: 36,
+   cpf: "12345678900",
+   email: "cintia@banana.com",
+   name: "Cintia"
+ }}
+
+iex> UserAgent.save(user)
+:ok
+
+iex> UserAgent.get("12345678900")
+{:ok,
+ %Exlivery.Users.User{
+   address: "Rua das bananeiras",
+   age: 36,
+   cpf: "12345678900",
+   email: "cintia@banana.com",
+   name: "Cintia"
+ }}
+
+iex> UserAgent.get("banana")
+{:error, "User not found."}
+```
