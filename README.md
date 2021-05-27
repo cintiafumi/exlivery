@@ -1175,3 +1175,87 @@ iex> UserAgent.get("12345678900")
 iex> UserAgent.get("banana")
 {:error, "User not found."}
 ```
+
+## Facilitando a criação do User
+
+Com Agent de User pronto, a função `save` pode salvar e atualizar. Basta receber um cpf e um user válido, vamos inserir no agent esse user. No contexto de `users` vamos criar um novo módulo para auxiliar `lib/users/create_or_update.ex` para criar esse user.
+
+Para criar um user internamente é muito custoso pois passamos 5 parâmetros. Então, vamos receber um map na função `call`.
+
+```elixir
+defmodule Exlivery.Users.CreateOrUpdate do
+  alias Exlivery.Users
+  alias Users.Agent, as: UserAgent
+  alias Users.User
+
+  def call(%{name: name, address: address, email: email, cpf: cpf, age: age}) do
+    address
+    |> User.build(name, email, cpf, age)
+    |> save_user()
+  end
+
+  defp save_user({:ok, %User{} = user}), do: UserAgent.save(user)
+  defp save_user({:error, _reason} = error), do: error
+end
+```
+
+No módulo principal `exlivery.ex`, vamos usá-lo como faxada (facade design pattern), que é o único módulo que o cliente externo conhece. Esse módulo delega internamente para submódulos.
+
+Agora usamos o `defdelegate` para delegar. E para criar, primeiro precisamos iniciar o Agent.
+
+```elixir
+defmodule Exlivery do
+  alias Exlivery.Users.Agent, as: UsersAgent
+  alias Exlivery.Users.CreateOrUpdate
+
+  def start_agents do
+    UsersAgent.start_link(%{})
+  end
+
+  defdelegate create_or_update_user(params), to: CreateOrUpdate, as: :call
+end
+```
+
+Vamos testar no `iex`. Primeiro, iniciamos os agents.
+
+```elixir
+iex> Exlivery.start_agents()
+{:ok, #PID<0.218.0>}
+
+iex> user_params = %{name: "Cintia", email: "cintia@banana.com", address: "Rua das bananeiras", cpf: "12345678900", age: 36}
+%{
+  address: "Rua das bananeiras",
+  age: 36,
+  cpf: "12345678900",
+  email: "cintia@banana.com",
+  name: "Cintia"
+}
+
+iex> Exlivery.create_or_update_user(user_params)
+:ok
+
+iex> Exlivery.create_or_update_user(%{cpf: "123456"})
+** (FunctionClauseError) no function clause matching in Exlivery.Users.CreateOrUpdate.call/1
+
+    The following arguments were given to Exlivery.Users.CreateOrUpdate.call/1:
+
+        # 1
+        %{cpf: "123456"}
+
+    Attempted function clauses (showing 1 out of 1):
+
+        def call(%{name: name, address: address, email: email, cpf: cpf, age: age})
+
+    (exlivery 0.1.0) lib/users/create_or_update.ex:6: Exlivery.Users.CreateOrUpdate.call/1
+iex(5)> user_params = %{name: "Cintia", email: "cintia@banana.com", address: "Rua das bananeiras", cpf: "12345678900", age: 16}
+%{
+  address: "Rua das bananeiras",
+  age: 16,
+  cpf: "12345678900",
+  email: "cintia@banana.com",
+  name: "Cintia"
+}
+
+iex> Exlivery.create_or_update_user(user_params)
+{:error, "Invalid parameters."}
+```
