@@ -1259,3 +1259,142 @@ iex(5)> user_params = %{name: "Cintia", email: "cintia@banana.com", address: "Ru
 iex> Exlivery.create_or_update_user(user_params)
 {:error, "Invalid parameters."}
 ```
+
+## Salvando a Order no Agent
+
+Adicionar nas dependências:
+
+```elixir
+{:elixir_uuid, "~> 1.2"}
+```
+
+E, rodar a instalação:
+
+```bash
+mix deps.get
+```
+
+Rodando o `iex`, vamos utilizar o `UUID.uuid4()`, mas futuramente usaremos o `Ecto` para gerar o `uuid`:
+
+```elixir
+iex> UUID.uuid4()
+"83ae33cb-27ce-4ed3-bf1f-a28e3a677f0e"
+
+iex> UUID.uuid4()
+"f7fec188-cc8a-4986-bf5e-b2901158babc"
+
+iex> UUID.uuid4()
+"44e15386-a7f8-4769-bf67-62f0598eb839"
+
+iex> UUID.uuid4()
+"ea936367-cdc3-4333-9891-c953a9dfb99f"
+```
+
+Criamos um arquivo de `agent.ex` no contexto de `orders`
+
+```elixir
+defmodule Exlivery.Orders.Agent do
+  alias Exlivery.Orders.Order
+
+  use Agent
+
+  def start_link(_initial_state) do
+    Agent.start_link(fn -> %{} end, name: __MODULE__)
+  end
+
+  def save(%Order{} = order) do
+    uuid = UUID.uuid4()
+
+    Agent.update(__MODULE__, &update_state(&1, order, uuid))
+
+    {:ok, uuid}
+  end
+
+  def get(uuid), do: Agent.get(__MODULE__, &get_order(&1, uuid))
+
+  defp get_order(state, uuid) do
+    case Map.get(state, uuid) do
+      nil -> {:error, "Order not found."}
+      order -> {:ok, order}
+    end
+  end
+
+  defp update_state(state, %Order{} = order, uuid), do: Map.put(state, uuid, order)
+end
+```
+
+No `iex`, precisamos criar `user` e pelo menos um `item` para então criar um `order`:
+
+```elixir
+iex> alias Exlivery.Users.User
+Exlivery.Users.User
+
+iex> {:ok, user} = User.build("Rua das bananeiras", "Cintia", "cintia@banana.com", "12345678900", 36)
+{:ok,
+ %Exlivery.Users.User{
+   address: "Rua das bananeiras",
+   age: 36,
+   cpf: "12345678900",
+   email: "cintia@banana.com",
+   name: "Cintia"
+ }}
+
+iex> alias Exlivery.Orders.Item
+Exlivery.Orders.Item
+
+iex> {:ok, item} = Item.build("Açaí", :sobremesa, "15.0", 1)
+{:ok,
+ %Exlivery.Orders.Item{
+   category: :sobremesa,
+   description: "Açaí",
+   quantity: 1,
+   unity_price: #Decimal<15.0>
+ }}
+
+iex> alias Exlivery.Orders.Order
+Exlivery.Orders.Order
+
+iex> {:ok, order} = Order.build(user, [item])
+{:ok,
+ %Exlivery.Orders.Order{
+   delivery_address: "Rua das bananeiras",
+   items: [
+     %Exlivery.Orders.Item{
+       category: :sobremesa,
+       description: "Açaí",
+       quantity: 1,
+       unity_price: #Decimal<15.0>
+     }
+   ],
+   total_price: #Decimal<15.00>,
+   user_cpf: "12345678900"
+ }}
+
+iex> alias Exlivery.Orders.Agent, as: OrderAgent
+Exlivery.Orders.Agent
+
+#Iniciar Agent
+iex> OrderAgent.start_link(%{})
+{:ok, #PID<0.296.0>}
+
+iex> OrderAgent.save(order)
+{:ok, "aab19286-471c-4417-a9de-1378429f84e0"}
+
+iex> OrderAgent.get("aab19286-471c-4417-a9de-1378429f84e0")
+{:ok,
+ %Exlivery.Orders.Order{
+   delivery_address: "Rua das bananeiras",
+   items: [
+     %Exlivery.Orders.Item{
+       category: :sobremesa,
+       description: "Açaí",
+       quantity: 1,
+       unity_price: #Decimal<15.0>
+     }
+   ],
+   total_price: #Decimal<15.00>,
+   user_cpf: "12345678900"
+ }}
+```
+
+Criamos as faxadas pois é muito custoso criar no `iex` cada etapa.
