@@ -905,7 +905,7 @@ defmodule Exlivery.Orders.ItemTest do
     test "when there is an invalid quantity, returns an error" do
       response = Item.build("Pizza de peperoni", :pizza, "35.5", 0)
 
-      expected_response = {:error, "Invalid parameters"}
+      expected_response = {:error, "Invalid parameters."}
 
       assert response == expected_response
     end
@@ -1596,4 +1596,126 @@ E voltamos para um item que existe, porém, vamos passar um cpf errado
 ```elixir
 iex> Exlivery.create_or_update_order(%{user_cpf: "123", items: items})
 {:error, "User not found."}
+```
+
+## Testando o User Agent
+
+Criamos o arquivo `agent_test.ex` dentro do contexto de test de user.
+
+Não vale a pena testar o `start_link`, pois só usamos ele para startar o `agent` e ele retorna um `:ok`.
+
+Para buildar o user já temos a factory.
+
+```elixir
+defmodule Exlivery.Users.AgentTest do
+  use ExUnit.Case
+
+  alias Exlivery.Users.Agent, as: UserAgent
+
+  import Exlivery.Factory
+
+  describe "save/1" do
+    test "saves the user" do
+      user = build(:user)
+
+      UserAgent.start_link(%{})
+
+      assert UserAgent.save(user) == :ok
+    end
+  end
+
+  describe "get/1" do
+    test "when the user is found, returns the user" do
+      UserAgent.start_link(%{})
+
+      :user
+      |> build(cpf: "98765432100")
+      |> UserAgent.save()
+
+      response = UserAgent.get("98765432100")
+
+      expected_response =
+        {:ok,
+         %Exlivery.Users.User{
+           address: "Rua das bananeiras, 35",
+           age: 36,
+           cpf: "98765432100",
+           email: "cintia@banana.com",
+           name: "Cintia"
+         }}
+
+      assert response == expected_response
+    end
+
+    test "when the user is not found, returns an error" do
+      UserAgent.start_link(%{})
+
+      response = UserAgent.get("00000000000")
+
+      expected_response = {:error, "User not found."}
+
+      assert response == expected_response
+    end
+  end
+end
+```
+
+Vemos que repetimos toda vez o `start_link`, então, vamos fazer o setup
+
+```elixir
+defmodule Exlivery.Users.AgentTest do
+  use ExUnit.Case
+
+  alias Exlivery.Users.Agent, as: UserAgent
+
+  import Exlivery.Factory
+
+  describe "save/1" do
+    test "saves the user" do
+      user = build(:user)
+
+      UserAgent.start_link(%{})
+
+      assert UserAgent.save(user) == :ok
+    end
+  end
+
+  describe "get/1" do
+    setup do
+      UserAgent.start_link(%{})
+
+      cpf = "98765432100"
+
+      {:ok, cpf: cpf}
+    end
+
+    test "when the user is found, returns the user", %{cpf: cpf} do
+      :user
+      |> build(cpf: cpf)
+      |> UserAgent.save()
+
+      response = UserAgent.get(cpf)
+
+      expected_response =
+        {:ok,
+         %Exlivery.Users.User{
+           address: "Rua das bananeiras, 35",
+           age: 36,
+           cpf: "98765432100",
+           email: "cintia@banana.com",
+           name: "Cintia"
+         }}
+
+      assert response == expected_response
+    end
+
+    test "when the user is not found, returns an error" do
+      response = UserAgent.get("00000000000")
+
+      expected_response = {:error, "User not found."}
+
+      assert response == expected_response
+    end
+  end
+end
 ```

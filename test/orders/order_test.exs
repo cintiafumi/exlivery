@@ -9,16 +9,15 @@ defmodule Exlivery.Orders.OrderTest do
     test "when all params are valid, returns an item" do
       user = build(:user)
 
-      # items = [
-      #   build(:item),
-      #   build(:item,
-      #     description: "Temaki de atum",
-      #     category: :japonesa,
-      #     quantity: 2,
-      #     unity_price: Decimal.new("20.50")
-      #   )
-      # ]
-      items = build_list(2, :item)
+      items = [
+        build(:item),
+        build(:item,
+          description: "Temaki de atum",
+          category: :japonesa,
+          quantity: 2,
+          unity_price: Decimal.new("20.50")
+        )
+      ]
 
       response = Order.build(user, items)
 
@@ -34,7 +33,7 @@ defmodule Exlivery.Orders.OrderTest do
 
       response = Order.build(user, items)
 
-      expected_response = {:error, "Invalid parameters"}
+      expected_response = {:error, "Invalid parameters."}
 
       assert response == expected_response
     end
