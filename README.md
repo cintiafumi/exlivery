@@ -2063,3 +2063,55 @@ iex> OrderAgent.list_all() |> Map.values()
   }
 ]
 ```
+
+## Gerando o relatório de pedidos
+
+No contexto de `orders`, vamos criar um novo arquivo chamado `report.ex`, com uma função que cria nosso arquivo csv. Quando não passado o nome do arquivo `filename`, o valor default é `report.csv`
+
+```elixir
+defmodule Exlivery.Orders.Report do
+  alias Exlivery.Orders.Agent, as: OrderAgent
+  alias Exlivery.Orders.{Item, Order}
+
+  def create(filename \\ "report.csv") do
+    order_list = build_order_list()
+
+    File.write(filename, order_list)
+  end
+
+  defp build_order_list do
+    OrderAgent.list_all()
+    |> Map.values()
+    |> Enum.map(fn order -> order_string(order) end)
+  end
+
+  defp order_string(%Order{user_cpf: cpf, items: items, total_price: total_price}) do
+    items_string = Enum.map(items, fn item -> item_string(item) end)
+    "#{cpf},#{items_string},#{total_price}\n"
+  end
+
+  defp item_string(%Item{category: category, quantity: quantity, unity_price: unity_price}) do
+    "#{category},#{quantity},#{unity_price}"
+  end
+end
+```
+
+Vamos ver no `iex`
+
+```elixir
+iex> :order |> build() |> OrderAgent.save()
+{:ok, "609b6f00-f418-4af4-9f41-3595bbe57c5e"}
+
+iex> :order |> build() |> OrderAgent.save()
+{:ok, "ddc33755-5f32-41dd-a355-aaee033f3ecb"}
+
+iex> Exlivery.Orders.Report.create()
+["12345678900,pizza,1,35.5japonesa,2,20.50,76.50\n",
+ "12345678900,pizza,1,35.5japonesa,2,20.50,76.50\n",
+ "12345678900,pizza,1,35.5japonesa,2,20.50,76.50\n",
+ "12345678900,pizza,1,35.5japonesa,2,20.50,76.50\n",
+ "12345678900,pizza,1,35.5japonesa,2,20.50,76.50\n"]
+:ok
+```
+
+Lembrando que sempre o último é o valor total.
