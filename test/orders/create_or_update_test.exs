@@ -32,7 +32,11 @@ defmodule Exlivery.Orders.CreateOrUpdateTest do
       {:ok, user_cpf: cpf, item1: item1, item2: item2}
     end
 
-    test "when all params are valid, saves the order", %{user_cpf: cpf, item1: item1, item2: item2} do
+    test "when all params are valid, saves the order", %{
+      user_cpf: cpf,
+      item1: item1,
+      item2: item2
+    } do
       params = %{
         user_cpf: cpf,
         items: [item1, item2]
@@ -56,7 +60,11 @@ defmodule Exlivery.Orders.CreateOrUpdateTest do
       assert response == expected_response
     end
 
-    test "when there are invalid items, returns an error", %{user_cpf: cpf, item1: item1, item2: item2} do
+    test "when there are invalid items, returns an error", %{
+      user_cpf: cpf,
+      item1: item1,
+      item2: item2
+    } do
       params = %{
         user_cpf: cpf,
         items: [%{item1 | quantity: 0}, item2]

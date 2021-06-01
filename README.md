@@ -1914,3 +1914,152 @@ defmodule Exlivery.Orders.CreateOrUpdateTest do
   end
 end
 ```
+
+## Lendo todas as Orders do Agent
+
+Em `lib/orders/agent.ex`, adicionamos a função que vai retornar todo o state que está no Agent.
+
+```elixir
+  def list_all, do: Agent.get(__MODULE__, & &1)
+```
+
+E vamos iniciar o `iex` com ambiente de test para poder usar as factories.
+
+```bash
+MIX_ENV=test iex -S mix
+```
+
+Podemos importar a Factory e criar uma order com a função `build`
+
+```elixir
+iex> import Exlivery.Factory
+Exlivery.Factory
+
+iex> build(:order)
+%Exlivery.Orders.Order{
+  delivery_address: "Rua das bananeiras, 35",
+  items: [
+    %Exlivery.Orders.Item{
+      category: :pizza,
+      description: "Pizza de peperoni",
+      quantity: 1,
+      unity_price: #Decimal<35.5>
+    },
+    %Exlivery.Orders.Item{
+      category: :japonesa,
+      description: "Temaki de atum",
+      quantity: 2,
+      unity_price: #Decimal<20.50>
+    }
+  ],
+  total_price: #Decimal<76.50>,
+  user_cpf: "12345678900"
+}
+```
+
+Vamos criar o alias, iniciar o agent e salvar um order
+
+```elixir
+iex> alias Exlivery.Orders.Agent, as: OrderAgent
+Exlivery.Orders.Agent
+
+iex> OrderAgent.start_link(%{})
+{:ok, #PID<0.220.0>}
+
+iex> :order |> build() |> OrderAgent.save()
+{:ok, "e2c214d4-53ea-4415-adeb-00fb16e5322c"}
+```
+
+Agora podemos chamar a função `list_all` e vemos que a order criada está lá
+
+```elixir
+iex> OrderAgent.list_all()
+%{
+  "e2c214d4-53ea-4415-adeb-00fb16e5322c" => %Exlivery.Orders.Order{
+    delivery_address: "Rua das bananeiras, 35",
+    items: [
+      %Exlivery.Orders.Item{
+        category: :pizza,
+        description: "Pizza de peperoni",
+        quantity: 1,
+        unity_price: #Decimal<35.5>
+      },
+      %Exlivery.Orders.Item{
+        category: :japonesa,
+        description: "Temaki de atum",
+        quantity: 2,
+        unity_price: #Decimal<20.50>
+      }
+    ],
+    total_price: #Decimal<76.50>,
+    user_cpf: "12345678900"
+  }
+}
+```
+
+Criamos mais duas orders para aumentar a lista.
+
+Na hora de criar o arquivo csv, queremos retornar uma lista de orders, não importando o uuid. Para pegar só os valores, vamos usar o `Map.values`
+
+```elixir
+iex> OrderAgent.list_all() |> Map.values()
+[
+  %Exlivery.Orders.Order{
+    delivery_address: "Rua das bananeiras, 35",
+    items: [
+      %Exlivery.Orders.Item{
+        category: :pizza,
+        description: "Pizza de peperoni",
+        quantity: 1,
+        unity_price: #Decimal<35.5>
+      },
+      %Exlivery.Orders.Item{
+        category: :japonesa,
+        description: "Temaki de atum",
+        quantity: 2,
+        unity_price: #Decimal<20.50>
+      }
+    ],
+    total_price: #Decimal<76.50>,
+    user_cpf: "12345678900"
+  },
+  %Exlivery.Orders.Order{
+    delivery_address: "Rua das bananeiras, 35",
+    items: [
+      %Exlivery.Orders.Item{
+        category: :pizza,
+        description: "Pizza de peperoni",
+        quantity: 1,
+        unity_price: #Decimal<35.5>
+      },
+      %Exlivery.Orders.Item{
+        category: :japonesa,
+        description: "Temaki de atum",
+        quantity: 2,
+        unity_price: #Decimal<20.50>
+      }
+    ],
+    total_price: #Decimal<76.50>,
+    user_cpf: "12345678900"
+  },
+  %Exlivery.Orders.Order{
+    delivery_address: "Rua das bananeiras, 35",
+    items: [
+      %Exlivery.Orders.Item{
+        category: :pizza,
+        description: "Pizza de peperoni",
+        quantity: 1,
+        unity_price: #Decimal<35.5>
+      },
+      %Exlivery.Orders.Item{
+        category: :japonesa,
+        description: "Temaki de atum",
+        quantity: 2,
+        unity_price: #Decimal<20.50>
+      }
+    ],
+    total_price: #Decimal<76.50>,
+    user_cpf: "12345678900"
+  }
+]
+```
